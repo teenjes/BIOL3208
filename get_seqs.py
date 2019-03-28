@@ -24,6 +24,7 @@ import pandas as pd
 from pandas import DataFrame as df
 import subprocess
 import os
+from shutil import copyfile
 import argparse
 
 
@@ -52,11 +53,12 @@ parser.add_argument("minimum", type=int, help="Minimum length of the sequence")
 parser.add_argument("maximum", type=int, help="Maximum length of the sequence")
 args = parser.parse_args()
 
+print(args.reference_genome)
 
 if args.reference_genome[-5:] == "fastq":
-    reference = SeqIO.convert(os.path.abspath(args.reference_genome), "fastq", args.reference_genome[:-5]+'fasta', "fasta")
+    reference = SeqIO.convert((args.reference_genome), "fastq", args.reference_genome[:-5]+'fasta', "fasta")
 elif args.reference_genome[-5:] == "fasta":
-    reference = os.path.abspath(args.reference_genome)
+    reference = args.reference_genome
 else:
     print("ERROR: File not supported. Please use a fasta or fastq file with a file ending of either fasta or fastq respectively")
     exit()
@@ -68,8 +70,13 @@ else:
     exit()
 
 
-database = reference[:-6]+'db'
-outfmt6 = reference[:-6]+'.outfmt6'
+new_reference_file = "references/"+reference[11:-16]+"/"+reference[11:]
+
+cmd0 = 'copyfile(reference, new_reference_file)'
+subprocess.getoutput(cmd0)
+
+database = "references/"+reference[11:-16]+"/"+reference[11:-6]+'_db'
+outfmt6 = "references/"+reference[11:-16]+"/"+reference[11:-6]+'.outfmt6'
 
 cmd = 'makeblastdb -in %s -dbtype nucl -out %s' % (reference, database)
 subprocess.getoutput(cmd)
@@ -120,17 +127,17 @@ for row in forward_bed.itertuples(index=True, name='Pandas'):
 
 intervals_frame = pd.DataFrame(data=intervals_list, columns=['chrom', 'chromStart', 'chromEnd'])
 
-bedfile = reference[:-6]+'.ITS.bedfile'
+bedfile = "references/"+reference[11:-16]+"/"+reference[11:-6]+'.ITS.bedfile'
 
 intervals_frame.to_csv(bedfile, sep='\t', header=False, index=False)
 
-bedoutput = reference[:-6]+'.ITS.bedoutput.fasta'
+bedoutput = "references/"+reference[11:-16]+"/"+reference[11:-6]+'.ITS.bedoutput.fasta'
 cmd3 = 'bedtools getfasta -fo %s -fi %s -bed %s' % (bedoutput, reference, bedfile)
 subprocess.getoutput(cmd3)
 
 
 
-visual = SeqIO.parse(os.path.abspath(bedoutput), "fasta")
+visual = SeqIO.parse(bedoutput, "fasta")
 
     
     
@@ -138,25 +145,40 @@ if args.quiet:
     print("\n%i sequences found\n" % (len(intervals_frame)))
     counter = 1
     for record in visual:
-        assert "N" not in record.seq, "ERROR: sequence contains 'N' "
-        counter += 1
+        if "N" not in record.seq:
+            print("\nSequence %i\n" % counter)
+            counter += 1
+        else:
+            print("\nSequence %i\n" % counter)
+            print("ERROR: sequence contains 'N' ")
+            counter += 1
 elif args.verbose:
     print("\n%i sequences found, regions shown below\n" % (len(intervals_frame)))
     print(intervals_frame)
     print("\nSequences shown below")
     counter = 1
     for record in visual:
-        assert "N" not in record.seq, "ERROR: sequence contains 'N' "
-        print("\nSequence %i\n" % counter)
-        print(record.seq)
-        counter += 1
-        print("\n")
+        if "N" not in record.seq:
+            print("\nSequence %i\n" % counter)
+            print(record.seq)
+            counter += 1
+            print("\n")
+        else:
+            print("\nSequence %i\n" % counter)
+            print("ERROR: sequence contains 'N' ")
+            counter += 1
+            print("\n")
 else:
     print("\n%i sequences found, sequences shown below" % (len(intervals_frame)))
     counter = 1
     for record in visual:
-        assert "N" not in record.seq, "ERROR: sequence contains 'N' "
-        print("\nSequence %i\n" % counter)
-        print(record.seq)
-        counter += 1
-        print("\n")
+        if "N" not in record.seq:
+            print("\nSequence %i\n" % counter)
+            print(record.seq)
+            counter += 1
+            print("\n")
+        else:
+            print("\nSequence %i\n" % counter)
+            print("ERROR: sequence contains 'N' ")
+            counter += 1
+            print("\n")
